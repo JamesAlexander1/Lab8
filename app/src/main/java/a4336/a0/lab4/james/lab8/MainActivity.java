@@ -9,7 +9,9 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -18,12 +20,16 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private WifiP2pManager WD_Manager;
+    WifiP2pManager.Channel channel;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         WD_Manager = (WifiP2pManager)getSystemService(Context.WIFI_P2P_SERVICE);
+        channel = WD_Manager.initialize(this, getMainLooper(), null);
+
+
         final Button statusButton = (Button) findViewById(R.id.StatusButton);
 
         statusButton.setOnClickListener(new View.OnClickListener(){
@@ -57,6 +63,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    @Override
+    public void onPause(){
+        super.onPause();
+
+
+    }
 
     public void runDiscovery(){
 
@@ -84,8 +96,47 @@ public class MainActivity extends AppCompatActivity {
 
                     WifiP2pDevice device = (WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE);
                     list.add(device.deviceName + '\n' + device.deviceAddress + '\n' + device.primaryDeviceType + '\n' + device.secondaryDeviceType + '\n' + device.wpsDisplaySupported());
+
+                }else if(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION.equals(action)){
+
+                    //check if discovery has completed.
+                    int state = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, 1);
+
+                    if(state == WifiP2pManager.WIFI_P2P_DISCOVERY_STOPPED){
+                        //this method displays peer list to listView.
+                        unregisterReceiver(this);
+                        endDiscovery(list);
+                    }
                 }
             }
         };
+
+        //register Receiver
+
+        registerReceiver(broadcastReceiver, intentFilter);
+
+        //initiate peer discovery
+
+        WD_Manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+
+            @Override
+            public void onSuccess() {
+                // code for peer discovery goes in onRecieve method
+            }
+
+            @Override
+            public void onFailure(int i) {
+                //alert user that something went wrong
+            }
+        });
+    }
+    public void endDiscovery(List<String> list){
+
+        //end discovery and display results to ListView.
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, list);
+        ListView deviceList = (ListView) findViewById(R.id.DiscoverList);
+
+        deviceList.setAdapter(adapter);
     }
 }
