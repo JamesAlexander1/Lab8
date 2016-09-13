@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Lab8</string>
+    <string name="check_wifip2p_status">Check WifiP2P Status</string>
+    <string name="placeholder">Placeholder</string>
+    <string name="discover_peers">Discover Peers</string>
 </resources>
