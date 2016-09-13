@@ -4,17 +4,20 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -72,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void runDiscovery(){
 
-        final List<String> list = new ArrayList<String>();
+        final List<WifiP2pDevice> list = new ArrayList<WifiP2pDevice>();
         //first, have application listen for intents.
 
         final IntentFilter intentFilter = new IntentFilter();
@@ -95,7 +98,8 @@ public class MainActivity extends AppCompatActivity {
                 if(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)){
 
                     WifiP2pDevice device = (WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE);
-                    list.add(device.deviceName + '\n' + device.deviceAddress + '\n' + device.primaryDeviceType + '\n' + device.secondaryDeviceType + '\n' + device.wpsDisplaySupported());
+                    //list.add(device.deviceName + '\n' + device.deviceAddress + '\n' + device.primaryDeviceType + '\n' + device.secondaryDeviceType + '\n' + device.wpsDisplaySupported());
+                    list.add(device);
 
                 }else if(WifiP2pManager.WIFI_P2P_DISCOVERY_CHANGED_ACTION.equals(action)){
 
@@ -130,13 +134,74 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    public void endDiscovery(List<String> list){
+
+    public void endDiscovery(List<WifiP2pDevice> list){
 
         //end discovery and display results to ListView.
+        List<String> stringList = new ArrayList<String>();
+        Iterator<WifiP2pDevice> iterator = list.iterator();
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, list);
+        while(iterator.hasNext()){
+            WifiP2pDevice device = iterator.next();
+            stringList.add(device.deviceName + '\n' + device.deviceAddress + '\n' + device.primaryDeviceType + '\n' + device.secondaryDeviceType + '\n' + device.wpsDisplaySupported());
+
+        }
+       final Iterator<WifiP2pDevice> iterator2 = list.iterator();
+        final ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.activity_main, stringList);
         ListView deviceList = (ListView) findViewById(R.id.DiscoverList);
 
         deviceList.setAdapter(adapter);
+
+        //initalise functionality for connecting to devices specified in ListView.
+
+        deviceList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                startConnect(adapterView, iterator2, i);
+            }
+        });
+    }
+
+    //code for starting connection init. process when clicking on item in ListView.
+    public void startConnect(AdapterView<?> adapterView, Iterator<WifiP2pDevice> iterator, int pos){
+
+            int i = 0;
+            WifiP2pDevice device = iterator.next();
+
+            while (iterator.hasNext()){
+                if(i == pos){
+                    connectToPeer(device);
+                    break;
+                }
+                device = iterator.next();
+                i++;
+            }
+
+            //continued.
+    }
+
+
+    //code for testing initial connection to peer
+    public void connectToPeer(WifiP2pDevice device){
+
+        final TextView statusText = (TextView) findViewById(R.id.statusText);
+
+        WifiP2pConfig config = new WifiP2pConfig();
+        config.deviceAddress = device.deviceAddress;
+        WD_Manager.connect(channel, config, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                //on success
+                String temp = "connection successful";
+                statusText.setText(temp);
+            }
+
+            @Override
+            public void onFailure(int i) {
+                //on failure
+                String temp = "connection DENIED";
+                statusText.setText(temp);
+            }
+        });
     }
 }
